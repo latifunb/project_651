@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Mapbox Marker Filter Example</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        #filter { position: absolute; top: 10px; left: 10px; z-index: 1; background: #fff; padding: 10px; }
+        #home { position: absolute; top: 10px; right: 10px; z-index: 1; background: #fff; padding: 10px; }
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+
+<div id='filter'>
+    <label for='minPrice'>Min Price:</label>
+    <input type='number' id='minPrice' value='0' />
+    <label for='maxPrice'>Max Price:</label>
+    <input type='number' id='maxPrice' value='1000' />
+    <button onclick='applyFilter()'>Apply Filter</button>
+</div>
+
+<div id='home'>
+    <a href='Main Page.html'><button>Home</button></a>
+</div>
+
+<script>
+    // Mapbox access token
+    mapboxgl.accessToken = 'pk.eyJ1IjoicHJlZXRvbS1tb3p1bWRlciIsImEiOiJjbHRobDd0dmQwNXJxMmttZHY1NmFiOHNiIn0.fxEVWgM1OcoVh9gcMrcHYQ';
+
+    // Initial map settings
+    var initialCenter = [153.0251, -27.4698]; // Brisbane coordinates
+    var initialZoom = 10;
+
+    // Initialize map
+    var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11', // Choose your map style here
+        center: initialCenter,
+        zoom: initialZoom // Initial zoom level
+    });
+
+    // Function to load markers on the map
+    function loadMarkers(data) {
+        data.features.forEach(feature => {
+            var coordinates = feature.geometry.coordinates;
+            var popupContent = "<h3>" +
+                    "<p><strong>Room Type:</strong> " + feature.properties.room_type + "</p>" +
+                    "<p><strong>Accommodates:</strong> " + feature.properties.accommodates + "</p>" +
+                    "<p><strong>Neighbourhood:</strong> " + feature.properties.neighbourhood_cleansed + "</p>" +
+                    "<p><strong>Beds:</strong> " + feature.properties.beds + "</p>" +
+                    "<p><strong>Price:</strong> " + feature.properties.price + "</p>" +
+                    "<p><strong>Review Score:</strong> " + feature.properties.review_scores_rating + "</p>";
+
+            // Add marker
+            var marker = new mapboxgl.Marker()
+                .setLngLat(coordinates)
+                .setPopup(new mapboxgl.Popup().setHTML(popupContent))
+                .addTo(map);
+        });
+    }
+
+    // Function to remove existing markers
+    function removeMarkers() {
+        document.querySelectorAll('.mapboxgl-marker').forEach(marker => marker.remove());
+    }
+
+    // Function to apply filter
+    function applyFilter() {
+        var minPrice = parseFloat(document.getElementById('minPrice').value);
+        var maxPrice = parseFloat(document.getElementById('maxPrice').value);
+
+        // Check if markers are already loaded
+        var markersLoaded = document.querySelectorAll('.mapboxgl-marker').length > 0;
+
+        // If markers are loaded, remove them before applying the new filter
+        if (markersLoaded) {
+            removeMarkers();
+        }
+
+        // Fetch data from Mapbox Data API
+        fetch('https://api.mapbox.com/datasets/v1/preetom-mozumder/clv639uoekn1t1nt1bydlc16b/features?access_token=' + mapboxgl.accessToken)
+            .then(response => response.json())
+            .then(data => {
+                // Filter data based on price range
+                var filteredData = {
+                    "type": "FeatureCollection",
+                    "features": data.features.filter(feature => {
+                        var price = parseFloat(feature.properties.price.replace('$', '').replace(',', ''));
+                        return price >= minPrice && price <= maxPrice;
+                    })
+                };
+
+                // Load markers on the map with filtered data
+                loadMarkers(filteredData);
+            })
+            .catch(error => console.error('Error fetching data:', error));
+    }
+</script>
+
+</body>
+</html>

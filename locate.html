@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nearby Hotels</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css" rel="stylesheet" />
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+        #header {
+            color: rgb(82, 82, 170);
+        }
+        #home { position: absolute; top: 10px; right: 10px; z-index: 1; background: #fff; padding: 10px; }
+    
+    </style>
+</head>
+<body>
+    <h1 id="header">Nearby Hotels</h1>
+    <div id="map"></div>
+
+    <div id='home'>
+        <a href='Main Page.html'><button>Home</button></a>
+    </div>
+
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoicHJlZXRvbS1tb3p1bWRlciIsImEiOiJjbHRobDd0dmQwNXJxMmttZHY1NmFiOHNiIn0.fxEVWgM1OcoVh9gcMrcHYQ';
+
+        // Initialize the map
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11', // Choose your map style here
+            center: [0, 0], // Default center
+            zoom: 15 // Adjust the zoom level as needed
+        });
+
+        // Try HTML5 geolocation
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                var userLocation = {
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude
+                };
+
+                // Center the map on the user's location
+                map.setCenter([userLocation.lon, userLocation.lat]);
+
+                // Add a marker at the user's location
+                new mapboxgl.Marker({ color: 'red' })
+                    .setLngLat([userLocation.lon, userLocation.lat])
+                    .setPopup(new mapboxgl.Popup().setHTML('<h3>' + "My Location" + '</h3>'))
+                    .addTo(map);
+
+                // Fetch nearby hotels using Mapbox Places API
+                fetch('https://api.mapbox.com/geocoding/v5/mapbox.places/hotel.json?proximity=' + userLocation.lon + ',' + userLocation.lat + '&access_token=' + mapboxgl.accessToken)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Add markers for nearby hotels
+                        data.features.forEach(function(feature) {
+                            var hotelMarker = new mapboxgl.Marker()
+                                .setLngLat(feature.center)
+                                .setPopup(new mapboxgl.Popup().setHTML('<h3>' + feature.text + '</h3>'))
+                                .addTo(map);
+                        });
+                    })
+                    .catch(error => console.log('Error fetching nearby hotels:', error));
+            }, function() {
+                // Handle geolocation error
+                console.log('Error: The Geolocation service failed.');
+            });
+        } else {
+            // Browser doesn't support Geolocation
+            console.log('Error: Your browser doesn\'t support geolocation.');
+        }
+    </script>
+</body>
+</html>
